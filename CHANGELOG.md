@@ -11,6 +11,7 @@ All notable changes to this project are documented in this file. The format foll
 - Add, move, configure and delete page builder rows from the preview.
 - `alt_live_editor` tags for page builder rows, images and relationship fields.
 - The row toolbar appears on keyboard focus as well as hover, its buttons have accessible names and a visible focus ring, and the add-section buttons highlight on focus.
+- `wrap_empty_fields` option, to make Live Preview match the live site for empty fields.
 
 ### Security
 
@@ -26,8 +27,3 @@ All notable changes to this project are documented in this file. The format foll
 - Clicking a link inside an entries, taxonomy, tags or image wrapper opens the picker.
 - A page builder row that renders nothing shows a placeholder, so it can still be configured or deleted.
 - The editing script is only added to HTML responses, and the `as` parameter of `alt_live_editor` accepts a plain element name only.
-
-### Added
-
-- `wrap_empty_fields` option, to make Live Preview match the live site for empty fields.
-
