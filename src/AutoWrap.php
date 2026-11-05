@@ -123,6 +123,10 @@ class AutoWrap
                 $string = (string) ($resolved ?? '');
                 $empty = $string === '';
 
+                if ($empty && ! config('alt-live-editor.wrap_empty_fields', true)) {
+                    return $resolved;
+                }
+
                 return self::wrapMarkup($delegate->handle(), $string, $rowId, $empty);
             },
             $delegate->handle(),

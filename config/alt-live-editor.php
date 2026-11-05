@@ -50,6 +50,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Empty fields
+    |--------------------------------------------------------------------------
+    |
+    | Empty text fields are marked up too, so an editor can click the gap and
+    | type. In Live Preview that makes the field count as filled, so a template
+    | block wrapped in {{ if field }} appears in the preview but not on the live
+    | site. Set this to false to leave empty fields alone: the preview then
+    | matches the live site, but empty fields cannot be clicked into.
+    |
+    */
+
+    'wrap_empty_fields' => true,
+
+    /*
+    |--------------------------------------------------------------------------
     | Debug logging
     |--------------------------------------------------------------------------
     |
