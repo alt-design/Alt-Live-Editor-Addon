@@ -5,6 +5,7 @@ namespace AltDesign\AltLiveEditor\Tests\Feature;
 use AltDesign\AltLiveEditor\Tests\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 use Statamic\Facades\Blueprint;
+use Statamic\Facades\Collection;
 use Statamic\Facades\User;
 
 class RowOptionsControllerTest extends TestCase
@@ -40,6 +41,8 @@ class RowOptionsControllerTest extends TestCase
             ],
         ]);
 
+        Collection::make('pages')->save();
+
         Blueprint::shouldReceive('find')->with('collections.pages.page')->andReturn($blueprint);
         Blueprint::makePartial();
     }
@@ -72,7 +75,7 @@ class RowOptionsControllerTest extends TestCase
     {
         $this->requestOptions(['blueprint' => 'nope.nope', 'field' => 'page_builder', 'set' => 'hero'])
             ->assertOk()
-            ->assertJsonPath('error', 'Blueprint not found: nope.nope');
+            ->assertJsonPath('error', 'Blueprint not found');
     }
 
     #[Test]
