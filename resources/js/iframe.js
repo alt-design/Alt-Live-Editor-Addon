@@ -553,14 +553,24 @@
 
         el.appendChild(toolbar);
 
-        requestAnimationFrame(function () {
-            if (el.getBoundingClientRect().height >= 8) return;
-            var note = document.createElement('div');
+        function syncEmptyNote() {
+            var note = el.querySelector(':scope > [data-alt-row-empty-note]');
+            var hasContent = Array.prototype.some.call(el.children, function (child) {
+                return child !== toolbar && child !== note && child.getBoundingClientRect().height >= 8;
+            });
+            if (hasContent) {
+                if (note) note.remove();
+                return;
+            }
+            if (note || el.getBoundingClientRect().height >= 8) return;
+            note = document.createElement('div');
             note.setAttribute('data-alt-row-empty-note', '1');
             note.textContent = 'This ' + String(type || '').replace(/_/g, ' ') + ' section has nothing to show yet. Use the toolbar to configure or remove it.';
             note.style.cssText = 'padding:20px;text-align:center;font:500 13px/1.4 -apple-system,Segoe UI,sans-serif;color:#6b7280;background:#f9fafb;border:1px dashed #d1d5db;pointer-events:none;';
             el.insertBefore(note, el.firstChild);
-        });
+        }
+        if (document.readyState === 'complete') setTimeout(syncEmptyNote, 300);
+        else window.addEventListener('load', function () { setTimeout(syncEmptyNote, 300); });
 
         el.addEventListener('mouseenter', function () { toolbar.style.opacity = '1'; });
         el.addEventListener('mouseleave', function () {
