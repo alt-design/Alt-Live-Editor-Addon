@@ -404,7 +404,7 @@
             card.onmouseleave = function () { card.style.borderColor = '#e5e7eb'; card.style.boxShadow = ''; };
             var folderName = folder.basename || folder.path || folder;
             card.innerHTML = '<div style="aspect-ratio:1;background:#fef3e0;display:flex;align-items:center;justify-content:center"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#8a1538" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>' +
-                '<div style="padding:6px 8px;font-size:11px;color:#444;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📁 ' + esc(folderName) + '</div>';
+                '<div style="padding:6px 8px;font-size:11px;color:#444;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Folder: ' + esc(folderName) + '</div>';
             card.onclick = function () { onFolderPick(folder.path || folder); };
             grid.appendChild(card);
         });
@@ -515,6 +515,8 @@
             var b = document.createElement('button');
             b.type = 'button';
             b.title = label;
+            b.setAttribute('aria-label', label);
+            b.className = 'alt-le-control';
             b.innerHTML = svg;
             b.style.cssText = 'width:32px;height:32px;border:0;background:rgba(17,24,39,.92);color:#fff;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:auto;backdrop-filter:blur(4px);';
             b.onmouseenter = function () { b.style.background = '#8a1538'; };
@@ -527,6 +529,8 @@
         var dragHandle = tbBtn('Drag to reorder', '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="18" r="1"/></svg>', function () {});
         dragHandle.style.cursor = 'grab';
         dragHandle.onclick = null;
+        dragHandle.tabIndex = -1;
+        dragHandle.setAttribute('aria-hidden', 'true');
         toolbar.appendChild(dragHandle);
 
         toolbar.appendChild(tbBtn('Move up', '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>', function () {
@@ -548,7 +552,13 @@
         el.appendChild(toolbar);
 
         el.addEventListener('mouseenter', function () { toolbar.style.opacity = '1'; });
-        el.addEventListener('mouseleave', function () { toolbar.style.opacity = '0'; });
+        el.addEventListener('mouseleave', function () {
+            if (!toolbar.contains(document.activeElement)) toolbar.style.opacity = '0';
+        });
+        toolbar.addEventListener('focusin', function () { toolbar.style.opacity = '1'; });
+        toolbar.addEventListener('focusout', function (e) {
+            if (!toolbar.contains(e.relatedTarget) && !el.matches(':hover')) toolbar.style.opacity = '0';
+        });
 
         // Native HTML5 drag-and-drop, gated by mousedown on the drag handle
         el.draggable = false;
@@ -598,20 +608,26 @@
     function makeAddSectionButton(field, blueprint, refIndex, position, refRowId) {
         var btn = document.createElement('button');
         btn.type = 'button';
+        btn.className = 'alt-le-control';
         btn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add section ' + position + '</span>';
         btn.style.cssText = 'display:block;width:calc(100% - 32px);margin:8px auto;padding:8px 12px;border:1.5px dashed rgba(138,21,56,.4);background:transparent;color:rgba(138,21,56,.65);cursor:pointer;border-radius:8px;font:600 12px/1 -apple-system,Segoe UI,sans-serif;letter-spacing:.3px;text-transform:uppercase;transition:all 120ms;opacity:0.4;';
-        btn.onmouseenter = function () {
+        function highlight() {
             btn.style.opacity = '1';
             btn.style.background = 'rgba(138,21,56,.06)';
             btn.style.borderColor = '#8a1538';
             btn.style.color = '#8a1538';
-        };
-        btn.onmouseleave = function () {
+        }
+        function unhighlight() {
+            if (document.activeElement === btn || btn.matches(':hover')) return;
             btn.style.opacity = '0.4';
             btn.style.background = 'transparent';
             btn.style.borderColor = 'rgba(138,21,56,.4)';
             btn.style.color = 'rgba(138,21,56,.65)';
-        };
+        }
+        btn.onmouseenter = highlight;
+        btn.onmouseleave = unhighlight;
+        btn.addEventListener('focus', highlight);
+        btn.addEventListener('blur', unhighlight);
         btn.onclick = function (e) {
             e.preventDefault();
             openSetPicker(field, blueprint, refRowId, position);
@@ -1158,7 +1174,7 @@
         badge.style.cssText = 'position:fixed;bottom:16px;left:16px;z-index:2147483645;background:rgba(17,24,39,.92);color:#fff;padding:8px 14px;border-radius:999px;font:600 12px/1 -apple-system,Segoe UI,sans-serif;letter-spacing:.3px;box-shadow:0 4px 12px rgba(0,0,0,.25);user-select:none;backdrop-filter:blur(4px);';
 
         var style = document.createElement('style');
-        style.textContent = '@keyframes alte-pulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,.7)}70%{box-shadow:0 0 0 8px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}';
+        style.textContent = '.alt-le-control:focus-visible{outline:2px solid #2563eb;outline-offset:2px}@keyframes alte-pulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,.7)}70%{box-shadow:0 0 0 8px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}';
         document.head.appendChild(style);
 
         document.body.appendChild(badge);
@@ -1191,6 +1207,8 @@
             var b = document.createElement('button');
             b.type = 'button';
             b.title = label;
+            b.setAttribute('aria-label', label);
+            b.className = 'alt-le-control';
             b.innerHTML = html;
             b.style.cssText = 'background:transparent;border:0;color:#fff;width:30px;height:30px;border-radius:4px;cursor:pointer;font-size:14px;font-weight:600;display:inline-flex;align-items:center;justify-content:center';
             b.onmousedown = function (e) { e.preventDefault(); };
@@ -1203,7 +1221,7 @@
         toolbar.appendChild(btn('Bold (Cmd+B)', '<b>B</b>', function () { document.execCommand('bold'); }));
         toolbar.appendChild(btn('Italic (Cmd+I)', '<i>I</i>', function () { document.execCommand('italic'); }));
         toolbar.appendChild(btn('Underline (Cmd+U)', '<u>U</u>', function () { document.execCommand('underline'); }));
-        toolbar.appendChild(btn('Link (Cmd+K)', '🔗', function () {
+        toolbar.appendChild(btn('Link (Cmd+K)', '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>', function () {
             var url = prompt('URL:', 'https://');
             if (url) document.execCommand('createLink', false, url);
         }));
