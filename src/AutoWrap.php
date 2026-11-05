@@ -152,6 +152,10 @@ class AutoWrap
                     return $delegate->value();
                 }
 
+                if ($fieldtype->config('sets')) {
+                    return self::wrapBardSets($delegate, $raw, $rowId, $fieldtype);
+                }
+
                 return self::renderBardWithIds($raw, $delegate->handle(), $rowId, $fieldtype);
             },
             $delegate->handle(),
@@ -159,6 +163,92 @@ class AutoWrap
             $delegate->augmentable(),
             $delegate->shallow(),
         );
+    }
+
+    /**
+     * A Bard field with sets augments to a list the template loops over, so the
+     * list shape has to survive. Only the text pieces between sets are swapped for
+     * wrapped markup, in the order the augmentor produced them.
+     *
+     * @param  array<int, mixed>  $raw
+     * @return mixed
+     */
+    private static function wrapBardSets(Value $delegate, array $raw, ?string $rowId, $fieldtype)
+    {
+        $items = $delegate->value();
+
+        if (! is_array($items)) {
+            return $items;
+        }
+
+        $groups = self::textGroups($raw, $delegate->handle(), $rowId, $fieldtype);
+
+        return array_map(function ($item) use (&$groups) {
+            if (! $item instanceof Values) {
+                return $item;
+            }
+
+            $collection = $item->getProxiedInstance();
+
+            if (self::plainValue($collection->get('type')) !== 'text' || $groups === []) {
+                return $item;
+            }
+
+            $original = $collection->get('text');
+            $html = array_shift($groups);
+
+            $collection = $collection->put(
+                'text',
+                new Value($html, 'text', $original instanceof Value ? $original->fieldtype() : null),
+            );
+
+            return new Values($collection);
+        }, $items);
+    }
+
+    /**
+     * Rendered, id-marked HTML for each run of text nodes between sets, keyed by the
+     * node's position in the stored value so edits can be sent back to the right node.
+     * Disabled sets are dropped first, matching what the augmentor does.
+     *
+     * @param  array<int, mixed>  $raw
+     * @return array<int, string>
+     */
+    private static function textGroups(array $raw, string $fieldHandle, ?string $rowId, $fieldtype): array
+    {
+        $groups = [];
+        $current = [];
+
+        foreach ($raw as $index => $node) {
+            if (! is_array($node) || ! isset($node['type'])) {
+                continue;
+            }
+
+            if ($node['type'] === 'set') {
+                if (($node['attrs']['enabled'] ?? true) === false) {
+                    continue;
+                }
+
+                $groups[] = $current;
+                $current = [];
+
+                continue;
+            }
+
+            $current[$index] = $node;
+        }
+
+        $groups[] = $current;
+
+        return array_values(array_filter(array_map(
+            fn (array $nodes) => $nodes === [] ? '' : self::renderBardWithIds($nodes, $fieldHandle, $rowId, $fieldtype),
+            $groups,
+        ), fn (string $html) => $html !== ''));
+    }
+
+    private static function plainValue(mixed $value): mixed
+    {
+        return $value instanceof Value ? $value->value() : $value;
     }
 
     public static function wrapNestedSets(Value $delegate): Value
