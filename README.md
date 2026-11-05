@@ -123,6 +123,7 @@ the "add section" buttons. Use it inside your set loop. It reads `index`, `type`
 | --- | --- | --- |
 | `exclude_handles` | `slug`, `id`, `url`, `permalink` | Never made editable |
 | `picker` | see below | Which picker UI opens for relationship-ish fields |
+| `wrap_empty_fields` | `true` | Makes empty text fields clickable in the preview. A template block wrapped in `{{ if field }}` then shows in the preview even when the field is empty, which the live site would not. Set to `false` to match the live site |
 | `debug` | `false` | Log to the browser console (`ALT_LIVE_EDITOR_DEBUG`) |
 
 ### Picker styles

@@ -97,6 +97,7 @@ Wraps one page builder row so it gets the row toolbar and the **Add section** bu
 | --- | --- | --- |
 | `exclude_handles` | `slug`, `id`, `url`, `permalink` | Fields that are never made editable |
 | `picker` | see below | Which picker opens for images, entries, taxonomy and tags fields |
+| `wrap_empty_fields` | `true` | Makes empty text fields clickable in the preview. A template block wrapped in `{{ if field }}` then shows in the preview even when the field is empty, which the live site would not. Set to `false` to match the live site |
 | `debug` | `false` | Logs to the browser console. Set with `ALT_LIVE_EDITOR_DEBUG` |
 
 Two picker styles ship, chosen per field type:
