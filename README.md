@@ -9,18 +9,23 @@ configured and deleted from the preview itself.
 
 ## Requirements
 
-- Statamic **6.x**
+- Statamic **6.40** or later (tested on 6.40.0)
 - PHP 8.2+
 
 ## Installation
 
 ```bash
 composer require alt-design/alt-live-editor
-php artisan vendor:publish --tag=alt-live-editor
 ```
 
-The second command copies the control panel JS into `public/vendor/alt-live-editor`.
-Re-run it after upgrading the addon.
+Statamic publishes the control panel script into `public/vendor/alt-live-editor` itself,
+after every `composer install` and `composer update`, through the `statamic:install` step
+that a standard Statamic site runs after Composer. If your site's `composer.json` does not
+run that step, publish it yourself after installing or upgrading:
+
+```bash
+php artisan vendor:publish --tag=alt-live-editor --force
+```
 
 To publish the config file:
 
@@ -44,7 +49,7 @@ makes them `contenteditable`, and posts changes back to the parent window.
 The marking happens in PHP. `AutoWrap` hooks the Antlers cascade and, **only when
 `request()->isLivePreview()` is true**, replaces each of the entry's values with one
 that renders itself wrapped in a `data-alt-editable-*` span. Your front end is
-completely untouched outside Live Preview — no markup changes, no extra requests.
+completely untouched outside Live Preview: no markup changes, no extra requests.
 
 Nothing is written to disk from the preview. Edits are pushed into the publish form
 exactly as if they'd been typed in the sidebar; the editor still has to press **Save**.
@@ -52,8 +57,8 @@ That's why the confirmation pill says *Updated* rather than *Saved*.
 
 ## Template tags
 
-Scalar fields on the entry are wrapped automatically. For anything nested — a page
-builder row, an image, a relationship — wrap it explicitly so the addon knows what it's
+Scalar fields on the entry are wrapped automatically. For anything nested (a page
+builder row, an image, a relationship), wrap it explicitly so the addon knows what it's
 looking at.
 
 ### `{{ alt_live_editor }}`
@@ -68,12 +73,12 @@ Marks arbitrary content as an editable field.
 | --- | --- | --- |
 | `handle` | *required* | The field handle to bind to |
 | `as` | `span` | Element to wrap with |
-| `type` | `text` | `text` or `html` — whether to send `innerText` or `innerHTML` |
+| `type` | `text` | `text` or `html`: whether to send `innerText` or `innerHTML` |
 
 ### `{{ alt_live_editor:row }}`
 
 Wraps one page builder row so it gets the hover toolbar (move, settings, delete) and
-the "add section" buttons. Use it inside your set loop — it reads `index`, `type` and
+the "add section" buttons. Use it inside your set loop. It reads `index`, `type` and
 `last` from the loop context automatically.
 
 ```antlers
@@ -94,9 +99,9 @@ the "add section" buttons. Use it inside your set loop — it reads `index`, `ty
 
 | Parameter | Description |
 | --- | --- |
-| `handle` | *required* — the assets field handle |
+| `handle` | *required*, the assets field handle |
 | `container` | Asset container, defaults to `assets` |
-| `index` | For a gallery loop, which item this is — enables per-slide replace |
+| `index` | For a gallery loop, which item this is, so each slide can be replaced |
 | `rowid` | Override the auto-detected parent set id |
 
 ### `{{ alt_live_editor:entries }}` / `{{ alt_live_editor:taxonomy }}` / `{{ alt_live_editor:tags }}`
@@ -124,11 +129,11 @@ the "add section" buttons. Use it inside your set loop — it reads `index`, `ty
 
 Two implementations ship, chosen per field type:
 
-- **`native`** — reveals Statamic's own field in the publish sidebar and opens its
+- **`native`** reveals Statamic's own field in the publish sidebar and opens its
   picker. Familiar, and supports every option the fieldtype does. It drives Statamic's
   internal Vue components, so it's the half most likely to need attention after a
   Statamic upgrade.
-- **`builtin`** — opens this addon's own picker inside the preview. Works with the
+- **`builtin`** opens this addon's own picker inside the preview. Works with the
   sidebar hidden and doesn't touch Statamic internals, but supports a narrower set of
   options (no folder-level permissions, no custom fieldtype config).
 
@@ -143,7 +148,7 @@ Two implementations ship, chosen per field type:
 
 Set `'picker' => 'builtin'` as a plain string to use the built-in pickers everywhere.
 
-`tags` defaults to `builtin` because Statamic's tags fieldtype has no picker to open —
+`tags` defaults to `builtin` because Statamic's tags fieldtype has no picker to open:
 the native path can only focus the input, which isn't much of an editing experience.
 
 ## Security
@@ -152,7 +157,13 @@ The two halves talk over `postMessage`. Messages are only accepted from a window
 document actually hosts (an identity check on `event.source`, not a comparable origin
 string), and replies are addressed to that frame's real origin rather than broadcast
 with `*`. The CP endpoints live in `routes/cp.php`, so they inherit Statamic's control
-panel middleware — authentication and CSRF included.
+panel middleware, authentication and CSRF included. Each endpoint also checks the
+signed-in user's own permissions: the entries and taxonomy pickers only return entries and
+terms from collections and taxonomies the user can view, and the row and set endpoints
+refuse blueprints the user cannot view.
+
+The editing script is only added to responses Statamic recognises as Live Preview, which
+needs a valid Live Preview token. Normal front-end responses are never changed.
 
 ## Known limitations
 
@@ -160,7 +171,7 @@ panel middleware — authentication and CSRF included.
   span ends up wrapping block content, which is technically invalid nesting. It renders
   fine everywhere in practice, but it's why the wrapper is stripped back out when it
   lands inside an HTML attribute.
-- Dragging a row from one field into a different field isn't supported — reordering
+- Dragging a row from one field into a different field isn't supported. Reordering
   works within a single replicator/set field only.
 - Bard set nodes are skipped when marking editable content; their fields are wrapped
   via the normal nested-set path instead.
@@ -169,4 +180,4 @@ panel middleware — authentication and CSRF included.
 
 ## Licence
 
-MIT — © Alt Design Ltd
+MIT, © Alt Design Ltd

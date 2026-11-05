@@ -1,12 +1,28 @@
 {
     "name": "alt-design/alt-live-editor",
-    "description": "Edit fields directly inside the Statamic Live Preview iframe.",
-    "version": "1.0.0",
+    "description": "Edit Statamic entry content by clicking it in the Live Preview iframe. Changes go into the publish form and are saved as normal.",
     "type": "statamic-addon",
     "license": "MIT",
+    "keywords": [
+        "statamic",
+        "statamic-addon",
+        "live-preview",
+        "page-builder",
+        "inline-editing",
+        "control-panel"
+    ],
+    "authors": [
+        {
+            "name": "Alt Design",
+            "homepage": "https://alt-design.net"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/alt-design/Alt-Live-Editor-Addon/issues"
+    },
     "require": {
         "php": "^8.2",
-        "statamic/cms": "^6.0"
+        "statamic/cms": "^6.40"
     },
     "require-dev": {
         "orchestra/testbench": "^9.0|^10.0",
@@ -25,7 +41,7 @@
     "extra": {
         "statamic": {
             "name": "Alt Live Editor",
-            "description": "Edit fields directly inside the Statamic Live Preview iframe."
+            "description": "Edit entry content by clicking it in the Live Preview iframe."
         },
         "laravel": {
             "providers": [
