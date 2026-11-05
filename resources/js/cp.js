@@ -36,6 +36,16 @@
         return CP_ROOT + '/' + String(path).replace(/^\//, '');
     }
 
+    function esc(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+
     // Messages from the preview drive the publish form and can trigger a save, so only
     // accept them from a frame this document actually hosts. An identity check on
     // event.source beats comparing origin strings: it can't be spoofed, and it still
@@ -610,7 +620,7 @@
             '<div style="padding:18px 20px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,#8a1538,#5d0e26);color:#fff;">' +
                 '<div>' +
                     '<div style="font:600 11px/1 -apple-system,sans-serif;letter-spacing:.15em;text-transform:uppercase;opacity:.7">Section settings</div>' +
-                    '<div style="font:600 16px/1.2 -apple-system,sans-serif;margin-top:4px">' + title + '</div>' +
+                    '<div style="font:600 16px/1.2 -apple-system,sans-serif;margin-top:4px">' + esc(title) + '</div>' +
                 '</div>' +
                 '<button id="alt-row-settings-close" type="button" style="border:0;background:rgba(255,255,255,.12);color:#fff;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:18px;line-height:1;width:32px;height:32px">×</button>' +
             '</div>' +
@@ -665,7 +675,7 @@
                 var body = document.getElementById('alt-row-settings-body');
                 if (!body) return;
                 if (res.j.error || !res.j.fields || !res.j.fields.length) {
-                    body.innerHTML = '<div style="text-align:center;padding:40px 16px;color:#888;font-size:13px">' + (res.j.error || 'No editable options for this section.') + '</div>';
+                    body.innerHTML = '<div style="text-align:center;padding:40px 16px;color:#888;font-size:13px">' + esc(res.j.error || 'No editable options for this section.') + '</div>';
                     return;
                 }
                 body.innerHTML = '';
@@ -679,7 +689,7 @@
 
         var label = document.createElement('label');
         label.style.cssText = 'display:flex;align-items:center;gap:6px;font:600 12px/1.4 -apple-system,sans-serif;color:#374151;margin-bottom:6px;letter-spacing:.02em';
-        label.innerHTML = '<span>' + f.display + '</span>' + (f.required ? '<span style="color:#dc2626;font-size:11px">*</span>' : '');
+        label.innerHTML = '<span>' + esc(f.display) + '</span>' + (f.required ? '<span style="color:#dc2626;font-size:11px">*</span>' : '');
         wrap.appendChild(label);
 
         if (f.instructions) {
@@ -697,7 +707,7 @@
             var fallback = document.createElement('button');
             fallback.type = 'button';
             fallback.style.cssText = 'width:100%;padding:10px 12px;border:1px dashed #d1d5db;background:#fff;color:#374151;font:600 12px/1.3 -apple-system,sans-serif;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;transition:all 120ms';
-            var currentPreview = f.value == null || f.value === '' ? '<em style="color:#9ca3af;font-weight:400">empty</em>' : String(typeof f.value === 'object' ? JSON.stringify(f.value).slice(0, 32) : f.value).slice(0, 32);
+            var currentPreview = f.value == null || f.value === '' ? '<em style="color:#9ca3af;font-weight:400">empty</em>' : esc(String(typeof f.value === 'object' ? JSON.stringify(f.value).slice(0, 32) : f.value).slice(0, 32));
             fallback.innerHTML = '<span style="text-align:left;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + currentPreview + '</span><span style="font-size:11px;color:#8a1538;display:inline-flex;align-items:center;gap:4px;flex-shrink:0">Edit ↗</span>';
             fallback.onmouseenter = function () { fallback.style.borderColor = '#8a1538'; fallback.style.background = '#fef2f5'; };
             fallback.onmouseleave = function () { fallback.style.borderColor = '#d1d5db'; fallback.style.background = '#fff'; };
