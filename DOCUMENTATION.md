@@ -6,7 +6,7 @@ Alt Live Editor lets editors change an entry's content by clicking it in Statami
 - Images, entries, taxonomy and tags fields get a click-to-edit overlay.
 - Page builder rows (Replicator sets) can be added, moved, configured and deleted from the preview.
 
-Nothing is saved from the preview. Every change is pushed into the publish form exactly as if it had been typed there, so the editor still presses **Save**, and validation, revisions and permissions work as normal. The confirmation in the preview says *Updated*, not *Saved*, for that reason.
+The preview never saves anything itself. Every change is pushed into the publish form exactly as if it had been typed there, so the confirmation in the preview says *Updated*, not *Saved*. To save, the editor presses **Save** in the publish form, or **Save changes** in the preview, which presses the same button for them. Either way, validation, revisions and permissions work as normal.
 
 ## Requirements
 

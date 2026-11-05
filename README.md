@@ -51,9 +51,11 @@ The marking happens in PHP. `AutoWrap` hooks the Antlers cascade and, **only whe
 that renders itself wrapped in a `data-alt-editable-*` span. Your front end is
 completely untouched outside Live Preview: no markup changes, no extra requests.
 
-Nothing is written to disk from the preview. Edits are pushed into the publish form
-exactly as if they'd been typed in the sidebar; the editor still has to press **Save**.
-That's why the confirmation pill says *Updated* rather than *Saved*.
+The preview never writes to disk itself. Edits are pushed into the publish form exactly
+as if they'd been typed in the sidebar, which is why the confirmation pill says *Updated*
+rather than *Saved*. The **Save changes** button in the preview presses the publish
+form's own Save button, so saving still goes through Statamic's validation, revisions and
+permissions.
 
 ## Template tags
 
