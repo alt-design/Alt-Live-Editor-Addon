@@ -2,6 +2,7 @@
     'use strict';
 
     var SELECTOR = '[data-alt-editable-handle]';
+    var PICKER_WRAPPERS = '[data-alt-editable-entries-handle], [data-alt-editable-taxonomy-handle], [data-alt-editable-tags-handle], [data-alt-editable-image-handle]';
     var INIT_ATTR = 'altLiveEditorInit';
 
     var settings = window.__ALT_LIVE_EDITOR__ || {};
@@ -442,6 +443,7 @@
             if (href.startsWith('javascript:')) return;       // allow JS handlers
             if (href.startsWith('#')) return;                 // allow in-page anchors
             e.preventDefault();
+            if (link.closest(PICKER_WRAPPERS)) return;
             e.stopPropagation();
             e.stopImmediatePropagation();
         }, true);
