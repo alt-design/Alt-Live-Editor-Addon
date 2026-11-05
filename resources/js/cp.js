@@ -367,6 +367,29 @@
         });
     }
 
+    // Statamic 6 prefixes field ids with the publish container name ("field_base_<path>"); earlier
+    // versions used "field_<path>". Try the container-prefixed id first, then the bare one.
+    function fieldDomIds(ctx, path) {
+        var suffix = path.replaceAll('.', '_');
+        var ids = [];
+        if (ctx && ctx.name) ids.push('field_' + ctx.name + '_' + suffix);
+        ids.push('field_' + suffix);
+        return ids;
+    }
+
+    // Asset and some other fieldtypes don't put the id on their wrapper, so fall back to the
+    // <label for="..."> and walk up to the fieldtype element.
+    function findFieldWrapper(ctx, path) {
+        var ids = fieldDomIds(ctx, path);
+        for (var i = 0; i < ids.length; i++) {
+            var el = document.getElementById(ids[i]);
+            if (el) return el;
+            var label = document.querySelector('label[for="' + ids[i] + '"]');
+            if (label) return label.closest('[class*="-fieldtype"]') || label.closest('.form-group') || label.parentElement;
+        }
+        return null;
+    }
+
     function openNativeFieldPicker(handle, rowId, options) {
         log('openNativeFieldPicker', { handle: handle, rowId: rowId, containerCount: containers.size });
         options = options || {};
@@ -387,9 +410,7 @@
                 // Swap mode: if "Maximum items selected" is shown for this field, pop the last item
                 // so the native Link/Browse button reappears. The polling will then capture the picked item.
                 // This matches the user intent of "edit selection" — they want to replace, not add.
-                var preWrapperId = 'field_' + path.replaceAll('.', '_');
-                var preWrapper = document.getElementById(preWrapperId)
-                    || (document.querySelector('label[for="' + preWrapperId + '"]') || {}).closest && (document.querySelector('label[for="' + preWrapperId + '"]').closest('[class*="-fieldtype"]'));
+                var preWrapper = findFieldWrapper(sample, path);
                 var atMax = preWrapper && /Maximum items selected/i.test(preWrapper.textContent || '');
                 // Only swap-trim multi-item fields (e.g. entries with max=3). Trimming a single-asset field
                 // (max_files=1) to an empty array sends an invalid value to the live-preview endpoint and
@@ -406,16 +427,8 @@
             }
         }
 
-        var id = 'field_' + path.replaceAll('.', '_');
-        // Try direct id lookup first (most fieldtypes wrap with this id)
-        var wrapper = document.getElementById(id);
-        // Asset/some fieldtypes don't put id on the wrapper — find via the <label for="..."> and walk up
-        if (!wrapper) {
-            var label = document.querySelector('label[for="' + id + '"]');
-            if (label) {
-                wrapper = label.closest('[class*="-fieldtype"]') || label.closest('.form-group') || label.parentElement;
-            }
-        }
+        var id = fieldDomIds(sample, path)[0];
+        var wrapper = findFieldWrapper(sample, path);
         if (!wrapper) {
             warn('field DOM not found for #' + id);
             return;
