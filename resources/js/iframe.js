@@ -553,6 +553,15 @@
 
         el.appendChild(toolbar);
 
+        requestAnimationFrame(function () {
+            if (el.getBoundingClientRect().height >= 8) return;
+            var note = document.createElement('div');
+            note.setAttribute('data-alt-row-empty-note', '1');
+            note.textContent = 'This ' + String(type || '').replace(/_/g, ' ') + ' section has nothing to show yet. Use the toolbar to configure or remove it.';
+            note.style.cssText = 'padding:20px;text-align:center;font:500 13px/1.4 -apple-system,Segoe UI,sans-serif;color:#6b7280;background:#f9fafb;border:1px dashed #d1d5db;pointer-events:none;';
+            el.insertBefore(note, el.firstChild);
+        });
+
         el.addEventListener('mouseenter', function () { toolbar.style.opacity = '1'; });
         el.addEventListener('mouseleave', function () {
             if (!toolbar.contains(document.activeElement)) toolbar.style.opacity = '0';
