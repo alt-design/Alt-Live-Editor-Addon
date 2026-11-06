@@ -127,6 +127,18 @@ The addon adds no permissions of its own. Editors use it with the permissions th
 
 The editing script is only added to pages Statamic recognises as Live Preview, which needs a valid Live Preview token. Normal front-end pages are never changed, and the addon makes no requests to any outside service.
 
+## How it works
+
+There are two halves.
+
+**In the control panel** (`resources/js/cp.js`), the addon listens for Statamic's `publish-container-created` event and keeps a reference to the open publish form. When the preview sends an edit, it finds the field by its path in the form's values, sets the value and asks Live Preview to refresh.
+
+**In the preview** (`resources/js/iframe.js`), a script added only to Live Preview responses finds the elements your templates marked as editable, makes them editable and sends each change to the control panel.
+
+The marking happens on the server. Only when `request()->isLivePreview()` is true, the addon replaces each of the entry's values with one that renders itself wrapped in a `data-alt-editable-*` span. Outside Live Preview your templates render exactly as they would without the addon.
+
+The two halves talk over `postMessage`. Messages are only accepted from a window the control panel actually hosts (an identity check on the sending window, not a comparison of origin strings), and replies are addressed to that frame's real origin rather than to `*`.
+
 ## Known limitations
 
 - Plain field values are wrapped in a `<span>` in Live Preview. If a field renders block-level HTML, that span wraps block content. Browsers render it correctly, and the wrapper is removed where it would land inside an HTML attribute.
