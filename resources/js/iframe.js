@@ -2,6 +2,7 @@
     'use strict';
 
     var SELECTOR = '[data-alt-editable-handle]';
+    var PICKER_WRAPPERS = '[data-alt-editable-entries-handle], [data-alt-editable-taxonomy-handle], [data-alt-editable-tags-handle], [data-alt-editable-image-handle]';
     var INIT_ATTR = 'altLiveEditorInit';
 
     var settings = window.__ALT_LIVE_EDITOR__ || {};
@@ -41,6 +42,16 @@
     function pickerFor(type) {
         return PICKERS[type] === 'builtin' ? 'builtin' : 'native';
     }
+
+    function esc(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
 
     // Firefox doesn't implement contenteditable="plaintext-only" — it treats the
     // unknown value as "false", leaving the field silently uneditable. Fall back to
@@ -234,7 +245,7 @@
 
         var header = document.createElement('div');
         header.style.cssText = 'padding:16px 20px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;gap:12px;';
-        header.innerHTML = '<strong style="font-size:16px;color:#111">Choose or upload an image for "' + handle + '"</strong>' +
+        header.innerHTML = '<strong style="font-size:16px;color:#111">Choose or upload an image for "' + esc(handle) + '"</strong>' +
             '<div style="display:flex;gap:8px"><button id="alt-asset-picker-upload" style="border:0;background:#8a1538;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600">Upload new</button>' +
             '<button id="alt-asset-picker-close" style="border:0;background:#f3f4f6;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:14px">Cancel</button></div>';
 
@@ -269,12 +280,12 @@
             var file = fileInput.files && fileInput.files[0];
             if (!file) return;
 
-            body.innerHTML = '<div style="text-align:center;padding:40px;color:#8a1538">Uploading ' + file.name + '…</div>';
+            body.innerHTML = '<div style="text-align:center;padding:40px;color:#8a1538">Uploading ' + esc(file.name) + '…</div>';
 
             var uploadId = String(Date.now()) + ':up:' + Math.random();
             onReply(uploadId, function (d) {
                 if (d.error) {
-                    body.innerHTML = '<div style="text-align:center;padding:40px;color:#b91c1c">Upload failed: ' + d.error + '</div>';
+                    body.innerHTML = '<div style="text-align:center;padding:40px;color:#b91c1c">Upload failed: ' + esc(d.error) + '</div>';
                 } else if (d.asset) {
                     // Auto-select the uploaded asset
                     send({
@@ -325,11 +336,11 @@
 
         var renderBreadcrumb = function () {
             var parts = currentFolder.split('/').filter(function (p) { return p; });
-            var html = '<span style="cursor:pointer;text-decoration:underline" data-folder="/">' + container + '</span>';
+            var html = '<span style="cursor:pointer;text-decoration:underline" data-folder="/">' + esc(container) + '</span>';
             var path = '';
             for (var i = 0; i < parts.length; i++) {
                 path += '/' + parts[i];
-                html += ' › <span style="cursor:pointer;text-decoration:underline" data-folder="' + path + '">' + parts[i] + '</span>';
+                html += ' › <span style="cursor:pointer;text-decoration:underline" data-folder="' + esc(path) + '">' + esc(parts[i]) + '</span>';
             }
             var bc = document.getElementById('alt-asset-breadcrumb');
             bc.innerHTML = html;
@@ -375,7 +386,7 @@
 
     function renderAssetGrid(container, assets, folders, error, onPick, onFolderPick) {
         if (error) {
-            container.innerHTML = '<div style="text-align:center;padding:40px;color:#b91c1c">Failed to load assets: ' + error + '</div>';
+            container.innerHTML = '<div style="text-align:center;padding:40px;color:#b91c1c">Failed to load assets: ' + esc(error) + '</div>';
             return;
         }
         if ((!assets || !assets.length) && (!folders || !folders.length)) {
@@ -394,7 +405,7 @@
             card.onmouseleave = function () { card.style.borderColor = '#e5e7eb'; card.style.boxShadow = ''; };
             var folderName = folder.basename || folder.path || folder;
             card.innerHTML = '<div style="aspect-ratio:1;background:#fef3e0;display:flex;align-items:center;justify-content:center"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#8a1538" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>' +
-                '<div style="padding:6px 8px;font-size:11px;color:#444;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📁 ' + folderName + '</div>';
+                '<div style="padding:6px 8px;font-size:11px;color:#444;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Folder: ' + esc(folderName) + '</div>';
             card.onclick = function () { onFolderPick(folder.path || folder); };
             grid.appendChild(card);
         });
@@ -408,9 +419,9 @@
 
             var imgSrc = asset.thumbnail || asset.url || '';
             var meta = asset.width && asset.height ? asset.width + '×' + asset.height : (asset.size_formatted || '');
-            card.innerHTML = '<div style="aspect-ratio:1;background:#fff url(' + imgSrc + ') center/cover no-repeat"></div>' +
-                '<div style="padding:6px 8px;font-size:11px;color:#444;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (asset.basename || asset.path || '') + '</div>' +
-                (meta ? '<div style="padding:0 8px 6px;font-size:10px;color:#999">' + meta + '</div>' : '');
+            card.innerHTML = '<div style="aspect-ratio:1;background:#fff url(' + esc(JSON.stringify(imgSrc)) + ') center/cover no-repeat"></div>' +
+                '<div style="padding:6px 8px;font-size:11px;color:#444;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(asset.basename || asset.path || '') + '</div>' +
+                (meta ? '<div style="padding:0 8px 6px;font-size:10px;color:#999">' + esc(meta) + '</div>' : '');
             card.onclick = function () { onPick(asset); };
             grid.appendChild(card);
         });
@@ -432,6 +443,7 @@
             if (href.startsWith('javascript:')) return;       // allow JS handlers
             if (href.startsWith('#')) return;                 // allow in-page anchors
             e.preventDefault();
+            if (link.closest(PICKER_WRAPPERS)) return;
             e.stopPropagation();
             e.stopImmediatePropagation();
         }, true);
@@ -505,6 +517,8 @@
             var b = document.createElement('button');
             b.type = 'button';
             b.title = label;
+            b.setAttribute('aria-label', label);
+            b.className = 'alt-le-control';
             b.innerHTML = svg;
             b.style.cssText = 'width:32px;height:32px;border:0;background:rgba(17,24,39,.92);color:#fff;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:auto;backdrop-filter:blur(4px);';
             b.onmouseenter = function () { b.style.background = '#8a1538'; };
@@ -517,6 +531,8 @@
         var dragHandle = tbBtn('Drag to reorder', '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="18" r="1"/></svg>', function () {});
         dragHandle.style.cursor = 'grab';
         dragHandle.onclick = null;
+        dragHandle.tabIndex = -1;
+        dragHandle.setAttribute('aria-hidden', 'true');
         toolbar.appendChild(dragHandle);
 
         toolbar.appendChild(tbBtn('Move up', '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>', function () {
@@ -537,8 +553,33 @@
 
         el.appendChild(toolbar);
 
+        function syncEmptyNote() {
+            var note = el.querySelector(':scope > [data-alt-row-empty-note]');
+            var hasContent = Array.prototype.some.call(el.children, function (child) {
+                return child !== toolbar && child !== note && child.getBoundingClientRect().height >= 8;
+            });
+            if (hasContent) {
+                if (note) note.remove();
+                return;
+            }
+            if (note || el.getBoundingClientRect().height >= 8) return;
+            note = document.createElement('div');
+            note.setAttribute('data-alt-row-empty-note', '1');
+            note.textContent = 'This ' + String(type || '').replace(/_/g, ' ') + ' section has nothing to show yet. Use the toolbar to configure or remove it.';
+            note.style.cssText = 'padding:20px;text-align:center;font:500 13px/1.4 -apple-system,Segoe UI,sans-serif;color:#6b7280;background:#f9fafb;border:1px dashed #d1d5db;pointer-events:none;';
+            el.insertBefore(note, el.firstChild);
+        }
+        if (document.readyState === 'complete') setTimeout(syncEmptyNote, 300);
+        else window.addEventListener('load', function () { setTimeout(syncEmptyNote, 300); });
+
         el.addEventListener('mouseenter', function () { toolbar.style.opacity = '1'; });
-        el.addEventListener('mouseleave', function () { toolbar.style.opacity = '0'; });
+        el.addEventListener('mouseleave', function () {
+            if (!toolbar.contains(document.activeElement)) toolbar.style.opacity = '0';
+        });
+        toolbar.addEventListener('focusin', function () { toolbar.style.opacity = '1'; });
+        toolbar.addEventListener('focusout', function (e) {
+            if (!toolbar.contains(e.relatedTarget) && !el.matches(':hover')) toolbar.style.opacity = '0';
+        });
 
         // Native HTML5 drag-and-drop, gated by mousedown on the drag handle
         el.draggable = false;
@@ -588,20 +629,26 @@
     function makeAddSectionButton(field, blueprint, refIndex, position, refRowId) {
         var btn = document.createElement('button');
         btn.type = 'button';
+        btn.className = 'alt-le-control';
         btn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add section ' + position + '</span>';
         btn.style.cssText = 'display:block;width:calc(100% - 32px);margin:8px auto;padding:8px 12px;border:1.5px dashed rgba(138,21,56,.4);background:transparent;color:rgba(138,21,56,.65);cursor:pointer;border-radius:8px;font:600 12px/1 -apple-system,Segoe UI,sans-serif;letter-spacing:.3px;text-transform:uppercase;transition:all 120ms;opacity:0.4;';
-        btn.onmouseenter = function () {
+        function highlight() {
             btn.style.opacity = '1';
             btn.style.background = 'rgba(138,21,56,.06)';
             btn.style.borderColor = '#8a1538';
             btn.style.color = '#8a1538';
-        };
-        btn.onmouseleave = function () {
+        }
+        function unhighlight() {
+            if (document.activeElement === btn || btn.matches(':hover')) return;
             btn.style.opacity = '0.4';
             btn.style.background = 'transparent';
             btn.style.borderColor = 'rgba(138,21,56,.4)';
             btn.style.color = 'rgba(138,21,56,.65)';
-        };
+        }
+        btn.onmouseenter = highlight;
+        btn.onmouseleave = unhighlight;
+        btn.addEventListener('focus', highlight);
+        btn.addEventListener('blur', unhighlight);
         btn.onclick = function (e) {
             e.preventDefault();
             openSetPicker(field, blueprint, refRowId, position);
@@ -634,7 +681,7 @@
         onReply(requestId, function (data) {
 
             if (data.error || !data.sets || !data.sets.length) {
-                body.innerHTML = '<div style="text-align:center;padding:30px;color:#b91c1c">' + (data.error || 'No sets available.') + '</div>';
+                body.innerHTML = '<div style="text-align:center;padding:30px;color:#b91c1c">' + esc(data.error || 'No sets available.') + '</div>';
                 return;
             }
 
@@ -646,9 +693,9 @@
                 card.onmouseenter = function () { card.style.borderColor = '#8a1538'; card.style.background = '#fff'; };
                 card.onmouseleave = function () { card.style.borderColor = '#e5e7eb'; card.style.background = '#fafafa'; };
 
-                var iconHtml = '<div style="width:36px;height:36px;background:#8a1538;color:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font:600 14px/1 sans-serif">' + (set.display || set.handle).charAt(0).toUpperCase() + '</div>';
-                var info = '<div style="flex:1"><div style="font:600 14px/1.2 sans-serif;color:#111">' + (set.display || set.handle) + '</div>';
-                if (set.instructions) info += '<div style="font:400 12px/1.4 sans-serif;color:#666;margin-top:3px">' + set.instructions + '</div>';
+                var iconHtml = '<div style="width:36px;height:36px;background:#8a1538;color:#fff;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font:600 14px/1 sans-serif">' + esc((set.display || set.handle).charAt(0).toUpperCase()) + '</div>';
+                var info = '<div style="flex:1"><div style="font:600 14px/1.2 sans-serif;color:#111">' + esc(set.display || set.handle) + '</div>';
+                if (set.instructions) info += '<div style="font:400 12px/1.4 sans-serif;color:#666;margin-top:3px">' + esc(set.instructions) + '</div>';
                 info += '</div>';
                 card.innerHTML = iconHtml + info;
 
@@ -721,7 +768,7 @@
 
         var dialog = document.createElement('div');
         dialog.style.cssText = 'width:min(520px,92vw);background:#fff;border-radius:10px;box-shadow:0 24px 60px rgba(0,0,0,.4);overflow:hidden;display:flex;flex-direction:column;';
-        dialog.innerHTML = '<div style="padding:18px 20px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center"><strong style="font-size:16px;color:#111">Edit tags: ' + handle + '</strong><button id="alt-tags-close" style="border:0;background:#f3f4f6;padding:6px 12px;border-radius:6px;cursor:pointer">Cancel</button></div>';
+        dialog.innerHTML = '<div style="padding:18px 20px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center"><strong style="font-size:16px;color:#111">Edit tags: ' + esc(handle) + '</strong><button id="alt-tags-close" style="border:0;background:#f3f4f6;padding:6px 12px;border-radius:6px;cursor:pointer">Cancel</button></div>';
 
         var body = document.createElement('div');
         body.style.cssText = 'padding:16px';
@@ -765,7 +812,7 @@
                 current.forEach(function (tag, idx) {
                     var pill = document.createElement('span');
                     pill.style.cssText = 'display:inline-flex;align-items:center;gap:4px;background:#8a1538;color:#fff;padding:4px 8px 4px 10px;border-radius:999px;font-size:12px;';
-                    pill.innerHTML = tag + '<button type="button" style="background:transparent;border:0;color:#fff;cursor:pointer;font-size:14px;padding:0 4px;line-height:1">×</button>';
+                    pill.innerHTML = esc(tag) + '<button type="button" style="background:transparent;border:0;color:#fff;cursor:pointer;font-size:14px;padding:0 4px;line-height:1">×</button>';
                     pill.querySelector('button').onclick = function () {
                         current.splice(idx, 1);
                         render();
@@ -854,7 +901,7 @@
 
         var dialog = document.createElement('div');
         dialog.style.cssText = 'width:min(720px,92vw);max-height:80vh;background:#fff;border-radius:10px;box-shadow:0 24px 60px rgba(0,0,0,.4);overflow:hidden;display:flex;flex-direction:column;';
-        dialog.innerHTML = '<div style="padding:18px 20px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;gap:12px"><strong style="font-size:16px;color:#111">Select ' + (max ? 'up to ' + max + ' ' : '') + 'entries for "' + handle + '"</strong><button id="alt-entries-close" style="border:0;background:#f3f4f6;padding:6px 12px;border-radius:6px;cursor:pointer">Cancel</button></div>';
+        dialog.innerHTML = '<div style="padding:18px 20px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;gap:12px"><strong style="font-size:16px;color:#111">Select ' + (max ? 'up to ' + max + ' ' : '') + 'entries for "' + esc(handle) + '"</strong><button id="alt-entries-close" style="border:0;background:#f3f4f6;padding:6px 12px;border-radius:6px;cursor:pointer">Cancel</button></div>';
 
         var toolbar = document.createElement('div');
         toolbar.style.cssText = 'padding:12px 16px;border-bottom:1px solid #f3f4f6;background:#fafafa';
@@ -943,8 +990,8 @@
 
                 var info = document.createElement('div');
                 info.style.cssText = 'flex:1;min-width:0';
-                info.innerHTML = '<div style="font:600 13px/1.2 sans-serif;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (entry.title || entry.slug || entry.id) + '</div>' +
-                    '<div style="font:400 11px/1.2 sans-serif;color:#888;margin-top:3px">' + (entry.collection_title || entry.collection || '') + (entry.slug ? ' · /' + entry.slug : '') + '</div>';
+                info.innerHTML = '<div style="font:600 13px/1.2 sans-serif;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(entry.title || entry.slug || entry.id) + '</div>' +
+                    '<div style="font:400 11px/1.2 sans-serif;color:#888;margin-top:3px">' + esc((entry.collection_title || entry.collection || '') + (entry.slug ? ' · /' + entry.slug : '')) + '</div>';
 
                 row.appendChild(cb);
                 row.appendChild(info);
@@ -1024,7 +1071,7 @@
 
         var dialog = document.createElement('div');
         dialog.style.cssText = 'width:min(640px,92vw);max-height:80vh;background:#fff;border-radius:10px;box-shadow:0 24px 60px rgba(0,0,0,.4);overflow:hidden;display:flex;flex-direction:column;';
-        dialog.innerHTML = '<div style="padding:18px 20px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;gap:12px"><strong style="font-size:16px;color:#111">Select ' + (max ? 'up to ' + max + ' ' : '') + 'terms for "' + handle + '"</strong><button id="alt-tax-close" style="border:0;background:#f3f4f6;padding:6px 12px;border-radius:6px;cursor:pointer">Cancel</button></div>';
+        dialog.innerHTML = '<div style="padding:18px 20px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;gap:12px"><strong style="font-size:16px;color:#111">Select ' + (max ? 'up to ' + max + ' ' : '') + 'terms for "' + esc(handle) + '"</strong><button id="alt-tax-close" style="border:0;background:#f3f4f6;padding:6px 12px;border-radius:6px;cursor:pointer">Cancel</button></div>';
 
         var toolbar = document.createElement('div');
         toolbar.style.cssText = 'padding:12px 16px;border-bottom:1px solid #f3f4f6;background:#fafafa';
@@ -1103,8 +1150,8 @@
 
                 var info = document.createElement('div');
                 info.style.cssText = 'flex:1';
-                info.innerHTML = '<div style="font:600 13px/1.2 sans-serif;color:#111">' + (term.title || term.slug) + '</div>' +
-                    '<div style="font:400 11px/1.2 sans-serif;color:#888;margin-top:3px">' + (term.taxonomy_title || term.taxonomy) + ' · ' + term.slug + '</div>';
+                info.innerHTML = '<div style="font:600 13px/1.2 sans-serif;color:#111">' + esc(term.title || term.slug) + '</div>' +
+                    '<div style="font:400 11px/1.2 sans-serif;color:#888;margin-top:3px">' + esc((term.taxonomy_title || term.taxonomy) + ' · ' + term.slug) + '</div>';
                 row.appendChild(cb);
                 row.appendChild(info);
                 body.appendChild(row);
@@ -1148,7 +1195,7 @@
         badge.style.cssText = 'position:fixed;bottom:16px;left:16px;z-index:2147483645;background:rgba(17,24,39,.92);color:#fff;padding:8px 14px;border-radius:999px;font:600 12px/1 -apple-system,Segoe UI,sans-serif;letter-spacing:.3px;box-shadow:0 4px 12px rgba(0,0,0,.25);user-select:none;backdrop-filter:blur(4px);';
 
         var style = document.createElement('style');
-        style.textContent = '@keyframes alte-pulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,.7)}70%{box-shadow:0 0 0 8px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}';
+        style.textContent = '.alt-le-control:focus-visible{outline:2px solid #2563eb;outline-offset:2px}@keyframes alte-pulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,.7)}70%{box-shadow:0 0 0 8px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}';
         document.head.appendChild(style);
 
         document.body.appendChild(badge);
@@ -1181,6 +1228,8 @@
             var b = document.createElement('button');
             b.type = 'button';
             b.title = label;
+            b.setAttribute('aria-label', label);
+            b.className = 'alt-le-control';
             b.innerHTML = html;
             b.style.cssText = 'background:transparent;border:0;color:#fff;width:30px;height:30px;border-radius:4px;cursor:pointer;font-size:14px;font-weight:600;display:inline-flex;align-items:center;justify-content:center';
             b.onmousedown = function (e) { e.preventDefault(); };
@@ -1193,7 +1242,7 @@
         toolbar.appendChild(btn('Bold (Cmd+B)', '<b>B</b>', function () { document.execCommand('bold'); }));
         toolbar.appendChild(btn('Italic (Cmd+I)', '<i>I</i>', function () { document.execCommand('italic'); }));
         toolbar.appendChild(btn('Underline (Cmd+U)', '<u>U</u>', function () { document.execCommand('underline'); }));
-        toolbar.appendChild(btn('Link (Cmd+K)', '🔗', function () {
+        toolbar.appendChild(btn('Link (Cmd+K)', '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>', function () {
             var url = prompt('URL:', 'https://');
             if (url) document.execCommand('createLink', false, url);
         }));

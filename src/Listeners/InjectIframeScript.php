@@ -20,6 +20,10 @@ class InjectIframeScript
             return;
         }
 
+        if (! $this->isHtml($response)) {
+            return;
+        }
+
         $content = $response->getContent();
 
         if (! is_string($content)) {
@@ -35,31 +39,42 @@ class InjectIframeScript
         $response->setContent($content);
     }
 
+    private function isHtml(Response $response): bool
+    {
+        $type = $response->headers->get('Content-Type');
+
+        return $type === null || str_contains(strtolower($type), 'html');
+    }
+
     private function stripAttributeSpans(string $html): string
     {
         $pattern = '/<span\s+data-alt-editable-handle="[^"]*"(?:\s+data-alt-editable-rowid="[^"]*")?(?:\s+data-alt-editable-empty="[^"]*")?>([\s\S]*?)<\/span>/i';
 
-        if (! preg_match_all($pattern, $html, $matches, PREG_OFFSET_CAPTURE)) {
-            return $html;
-        }
+        $offset = 0;
 
-        $count = count($matches[0]);
+        while (preg_match($pattern, $html, $match, PREG_OFFSET_CAPTURE, $offset)) {
+            [$fullMatch, $position] = $match[0];
+            [$inner] = $match[1];
 
-        for ($i = $count - 1; $i >= 0; $i--) {
-            [$fullMatch, $offset] = $matches[0][$i];
-            [$inner] = $matches[1][$i];
+            if ($this->isInsideTag(substr($html, 0, $position))) {
+                $html = substr_replace($html, $inner, $position, strlen($fullMatch));
+                $offset = $position;
 
-            $before = substr($html, 0, $offset);
-            $lastOpen = strrpos($before, '<');
-            $lastClose = strrpos($before, '>');
-            $inTag = $lastOpen !== false && ($lastClose === false || $lastOpen > $lastClose);
-
-            if ($inTag) {
-                $html = substr_replace($html, $inner, $offset, strlen($fullMatch));
+                continue;
             }
+
+            $offset = $position + 1;
         }
 
         return $html;
+    }
+
+    private function isInsideTag(string $before): bool
+    {
+        $lastOpen = strrpos($before, '<');
+        $lastClose = strrpos($before, '>');
+
+        return $lastOpen !== false && ($lastClose === false || $lastOpen > $lastClose);
     }
 
     private function scriptTag(): string

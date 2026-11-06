@@ -2,6 +2,7 @@
 
 namespace AltDesign\AltLiveEditor\Http\Controllers;
 
+use AltDesign\AltLiveEditor\Support\Access;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Statamic\Facades\Blueprint;
@@ -56,32 +57,36 @@ class RowOptionsController
         $blueprint = Blueprint::find($blueprintHandle);
 
         if (! $blueprint) {
-            return response()->json(['fields' => [], 'error' => "Blueprint not found: $blueprintHandle"]);
+            return response()->json(['fields' => [], 'error' => 'Blueprint not found']);
+        }
+
+        if (! Access::canReadBlueprint($blueprint)) {
+            return response()->json(['fields' => [], 'error' => 'You do not have permission to read this blueprint'], 403);
         }
 
         $field = $this->findFieldByPath($blueprint, $fieldPath);
 
         if (! $field) {
-            return response()->json(['fields' => [], 'error' => "Field not found: $fieldPath"]);
+            return response()->json(['fields' => [], 'error' => 'Field not found']);
         }
 
         $fieldtype = $field->fieldtype();
 
         if (! method_exists($fieldtype, 'flattenedSetsConfig')) {
-            return response()->json(['fields' => [], 'error' => "Field $fieldPath is not a set-based fieldtype"]);
+            return response()->json(['fields' => [], 'error' => 'Field is not a set-based fieldtype']);
         }
 
         $sets = $fieldtype->flattenedSetsConfig();
         $setConfig = $sets[$setType] ?? null;
 
         if (! $setConfig) {
-            return response()->json(['fields' => [], 'error' => "Set type $setType not found"]);
+            return response()->json(['fields' => [], 'error' => 'Set type not found']);
         }
 
         try {
             $fields = (new Fields(items: $setConfig['fields'] ?? []))->addValues($rowValues);
         } catch (\Throwable $e) {
-            return response()->json(['fields' => [], 'error' => 'Failed to resolve fields: '.$e->getMessage()]);
+            return response()->json(['fields' => [], 'error' => 'Failed to resolve fields']);
         }
 
         $optionFields = $fields->all()

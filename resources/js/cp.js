@@ -36,6 +36,16 @@
         return CP_ROOT + '/' + String(path).replace(/^\//, '');
     }
 
+    function esc(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+
     // Messages from the preview drive the publish form and can trigger a save, so only
     // accept them from a frame this document actually hosts. An identity check on
     // event.source beats comparing origin strings: it can't be spoofed, and it still
@@ -357,6 +367,29 @@
         });
     }
 
+    // Statamic 6 prefixes field ids with the publish container name ("field_base_<path>"); earlier
+    // versions used "field_<path>". Try the container-prefixed id first, then the bare one.
+    function fieldDomIds(ctx, path) {
+        var suffix = path.replaceAll('.', '_');
+        var ids = [];
+        if (ctx && ctx.name) ids.push('field_' + ctx.name + '_' + suffix);
+        ids.push('field_' + suffix);
+        return ids;
+    }
+
+    // Asset and some other fieldtypes don't put the id on their wrapper, so fall back to the
+    // <label for="..."> and walk up to the fieldtype element.
+    function findFieldWrapper(ctx, path) {
+        var ids = fieldDomIds(ctx, path);
+        for (var i = 0; i < ids.length; i++) {
+            var el = document.getElementById(ids[i]);
+            if (el) return el;
+            var label = document.querySelector('label[for="' + ids[i] + '"]');
+            if (label) return label.closest('[class*="-fieldtype"]') || label.closest('.form-group') || label.parentElement;
+        }
+        return null;
+    }
+
     function openNativeFieldPicker(handle, rowId, options) {
         log('openNativeFieldPicker', { handle: handle, rowId: rowId, containerCount: containers.size });
         options = options || {};
@@ -377,9 +410,7 @@
                 // Swap mode: if "Maximum items selected" is shown for this field, pop the last item
                 // so the native Link/Browse button reappears. The polling will then capture the picked item.
                 // This matches the user intent of "edit selection" — they want to replace, not add.
-                var preWrapperId = 'field_' + path.replaceAll('.', '_');
-                var preWrapper = document.getElementById(preWrapperId)
-                    || (document.querySelector('label[for="' + preWrapperId + '"]') || {}).closest && (document.querySelector('label[for="' + preWrapperId + '"]').closest('[class*="-fieldtype"]'));
+                var preWrapper = findFieldWrapper(sample, path);
                 var atMax = preWrapper && /Maximum items selected/i.test(preWrapper.textContent || '');
                 // Only swap-trim multi-item fields (e.g. entries with max=3). Trimming a single-asset field
                 // (max_files=1) to an empty array sends an invalid value to the live-preview endpoint and
@@ -396,16 +427,8 @@
             }
         }
 
-        var id = 'field_' + path.replaceAll('.', '_');
-        // Try direct id lookup first (most fieldtypes wrap with this id)
-        var wrapper = document.getElementById(id);
-        // Asset/some fieldtypes don't put id on the wrapper — find via the <label for="..."> and walk up
-        if (!wrapper) {
-            var label = document.querySelector('label[for="' + id + '"]');
-            if (label) {
-                wrapper = label.closest('[class*="-fieldtype"]') || label.closest('.form-group') || label.parentElement;
-            }
-        }
+        var id = fieldDomIds(sample, path)[0];
+        var wrapper = findFieldWrapper(sample, path);
         if (!wrapper) {
             warn('field DOM not found for #' + id);
             return;
@@ -610,7 +633,7 @@
             '<div style="padding:18px 20px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,#8a1538,#5d0e26);color:#fff;">' +
                 '<div>' +
                     '<div style="font:600 11px/1 -apple-system,sans-serif;letter-spacing:.15em;text-transform:uppercase;opacity:.7">Section settings</div>' +
-                    '<div style="font:600 16px/1.2 -apple-system,sans-serif;margin-top:4px">' + title + '</div>' +
+                    '<div style="font:600 16px/1.2 -apple-system,sans-serif;margin-top:4px">' + esc(title) + '</div>' +
                 '</div>' +
                 '<button id="alt-row-settings-close" type="button" style="border:0;background:rgba(255,255,255,.12);color:#fff;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:18px;line-height:1;width:32px;height:32px">×</button>' +
             '</div>' +
@@ -665,7 +688,7 @@
                 var body = document.getElementById('alt-row-settings-body');
                 if (!body) return;
                 if (res.j.error || !res.j.fields || !res.j.fields.length) {
-                    body.innerHTML = '<div style="text-align:center;padding:40px 16px;color:#888;font-size:13px">' + (res.j.error || 'No editable options for this section.') + '</div>';
+                    body.innerHTML = '<div style="text-align:center;padding:40px 16px;color:#888;font-size:13px">' + esc(res.j.error || 'No editable options for this section.') + '</div>';
                     return;
                 }
                 body.innerHTML = '';
@@ -679,7 +702,7 @@
 
         var label = document.createElement('label');
         label.style.cssText = 'display:flex;align-items:center;gap:6px;font:600 12px/1.4 -apple-system,sans-serif;color:#374151;margin-bottom:6px;letter-spacing:.02em';
-        label.innerHTML = '<span>' + f.display + '</span>' + (f.required ? '<span style="color:#dc2626;font-size:11px">*</span>' : '');
+        label.innerHTML = '<span>' + esc(f.display) + '</span>' + (f.required ? '<span style="color:#dc2626;font-size:11px">*</span>' : '');
         wrap.appendChild(label);
 
         if (f.instructions) {
@@ -697,7 +720,7 @@
             var fallback = document.createElement('button');
             fallback.type = 'button';
             fallback.style.cssText = 'width:100%;padding:10px 12px;border:1px dashed #d1d5db;background:#fff;color:#374151;font:600 12px/1.3 -apple-system,sans-serif;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;transition:all 120ms';
-            var currentPreview = f.value == null || f.value === '' ? '<em style="color:#9ca3af;font-weight:400">empty</em>' : String(typeof f.value === 'object' ? JSON.stringify(f.value).slice(0, 32) : f.value).slice(0, 32);
+            var currentPreview = f.value == null || f.value === '' ? '<em style="color:#9ca3af;font-weight:400">empty</em>' : esc(String(typeof f.value === 'object' ? JSON.stringify(f.value).slice(0, 32) : f.value).slice(0, 32));
             fallback.innerHTML = '<span style="text-align:left;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + currentPreview + '</span><span style="font-size:11px;color:#8a1538;display:inline-flex;align-items:center;gap:4px;flex-shrink:0">Edit ↗</span>';
             fallback.onmouseenter = function () { fallback.style.borderColor = '#8a1538'; fallback.style.background = '#fef2f5'; };
             fallback.onmouseleave = function () { fallback.style.borderColor = '#d1d5db'; fallback.style.background = '#fff'; };

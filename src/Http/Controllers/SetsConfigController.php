@@ -2,6 +2,7 @@
 
 namespace AltDesign\AltLiveEditor\Http\Controllers;
 
+use AltDesign\AltLiveEditor\Support\Access;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Statamic\Facades\Blueprint;
@@ -23,20 +24,24 @@ class SetsConfigController
         $blueprint = Blueprint::find($blueprintHandle);
 
         if (! $blueprint) {
-            return response()->json(['sets' => [], 'error' => "Blueprint not found: $blueprintHandle"]);
+            return response()->json(['sets' => [], 'error' => 'Blueprint not found']);
+        }
+
+        if (! Access::canReadBlueprint($blueprint)) {
+            return response()->json(['sets' => [], 'error' => 'You do not have permission to read this blueprint'], 403);
         }
 
         $field = $this->findFieldByPath($blueprint, $fieldPath);
 
         if (! $field) {
-            return response()->json(['sets' => [], 'error' => "Field not found: $fieldPath"]);
+            return response()->json(['sets' => [], 'error' => 'Field not found']);
         }
 
         $fieldtype = $field->fieldtype();
         $handle = $fieldtype::handle();
 
         if (! in_array($handle, ['replicator', 'bard', 'grid', 'sets'], true)) {
-            return response()->json(['sets' => [], 'error' => "Field $fieldPath is not a set-based fieldtype"]);
+            return response()->json(['sets' => [], 'error' => 'Field is not a set-based fieldtype']);
         }
 
         $flattened = method_exists($fieldtype, 'flattenedSetsConfig')

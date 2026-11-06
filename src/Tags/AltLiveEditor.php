@@ -22,7 +22,7 @@ class AltLiveEditor extends Tags
             return $inner;
         }
 
-        $tag = $this->params->get('as', 'span');
+        $tag = $this->elementName((string) $this->params->get('as', 'span'));
         $type = $this->params->get('type', 'text');
 
         $attrs = sprintf(
@@ -32,6 +32,14 @@ class AltLiveEditor extends Tags
         );
 
         return "<{$tag} {$attrs}>{$inner}</{$tag}>";
+    }
+
+    /**
+     * Element names come from the template, so anything that is not a plain tag name falls back to span.
+     */
+    private function elementName(string $name): string
+    {
+        return preg_match('/^[a-z][a-z0-9-]*$/i', $name) === 1 ? $name : 'span';
     }
 
     public function row(): string

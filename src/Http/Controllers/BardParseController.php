@@ -11,7 +11,9 @@ class BardParseController
 {
     public function __invoke(Request $request): JsonResponse
     {
-        $html = (string) $request->input('html', '');
+        $validated = $request->validate(['html' => ['nullable', 'string', 'max:500000']]);
+
+        $html = (string) ($validated['html'] ?? '');
 
         if ($html === '') {
             return response()->json(['nodes' => []]);

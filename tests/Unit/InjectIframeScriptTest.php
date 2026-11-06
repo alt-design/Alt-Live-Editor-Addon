@@ -77,6 +77,69 @@ class InjectIframeScriptTest extends TestCase
         $this->assertStringContainsString('<span data-alt-editable-handle="heading">Hi</span>', $out);
     }
 
+    #[Test]
+    public function it_strips_every_editable_span_in_a_tag_with_several_of_them()
+    {
+        $this->withLivePreview();
+
+        $out = $this->handle(
+            '<body><h1 style="color: <span data-alt-editable-handle="colour" data-alt-editable-rowid="r1">#fff</span>; '
+            .'max-width: <span data-alt-editable-handle="width" data-alt-editable-rowid="r1" data-alt-editable-empty="1"></span>px">'
+            .'<span data-alt-editable-handle="text">Hi</span></h1></body>'
+        );
+
+        $this->assertStringContainsString('style="color: #fff; max-width: px"', $out);
+        $this->assertStringContainsString('<span data-alt-editable-handle="text">Hi</span>', $out);
+    }
+
+    #[Test]
+    public function it_ignores_a_live_preview_query_string_without_a_valid_token()
+    {
+        request()->query->set('live-preview', 'anything');
+        request()->query->set('token', 'not-a-real-token');
+        Token::shouldReceive('find')->with('not-a-real-token')->andReturnNull();
+
+        $html = '<html><body><h1>Hi</h1></body></html>';
+
+        $this->assertSame($html, $this->handle($html));
+    }
+
+    #[Test]
+    public function it_ignores_a_forged_token_header()
+    {
+        request()->headers->set('X-Statamic-Token', 'forged');
+        Token::shouldReceive('find')->with('forged')->andReturnNull();
+
+        $html = '<html><body><h1>Hi</h1></body></html>';
+
+        $this->assertSame($html, $this->handle($html));
+    }
+
+    #[Test]
+    public function it_ignores_a_token_that_belongs_to_another_handler()
+    {
+        Token::shouldReceive('find')
+            ->with('other-token')
+            ->andReturn(new FileToken('other-token', 'Some\\Other\\Handler', []));
+        request()->headers->set('X-Statamic-Token', 'other-token');
+
+        $html = '<html><body><h1>Hi</h1></body></html>';
+
+        $this->assertSame($html, $this->handle($html));
+    }
+
+    #[Test]
+    public function it_does_not_touch_non_html_responses_in_live_preview()
+    {
+        $this->withLivePreview();
+
+        $response = new Response('{"html":"</body>"}', 200, ['Content-Type' => 'application/json']);
+
+        (new InjectIframeScript)->handle(new ResponseCreated($response, null));
+
+        $this->assertSame('{"html":"</body>"}', $response->getContent());
+    }
+
     /**
      * Statamic decides isLivePreview() by looking up the request's Statamic token and
      * checking its handler, so hand it a token pointing at the LivePreview handler.

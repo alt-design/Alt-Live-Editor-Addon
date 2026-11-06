@@ -5,11 +5,14 @@ namespace AltDesign\AltLiveEditor\Tests\Unit;
 use AltDesign\AltLiveEditor\AutoWrap;
 use AltDesign\AltLiveEditor\Tests\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use Statamic\Facades\Token;
 use Statamic\Fields\Field;
 use Statamic\Fields\Value;
 use Statamic\Fieldtypes\Assets\Assets;
 use Statamic\Fieldtypes\Replicator;
 use Statamic\Fieldtypes\Text;
+use Statamic\Tokens\FileToken;
+use Statamic\Tokens\Handlers\LivePreview;
 
 class AutoWrapTest extends TestCase
 {
@@ -110,5 +113,37 @@ class AutoWrapTest extends TestCase
     {
         // The whole point: the front end must be untouched on a normal request.
         $this->assertFalse(AutoWrap::isActive());
+    }
+
+    #[Test]
+    public function empty_fields_are_left_alone_when_wrapping_them_is_switched_off()
+    {
+        config()->set('alt-live-editor.wrap_empty_fields', false);
+        $this->withLivePreview();
+
+        $empty = AutoWrap::wrapScalar($this->value('subtitle', '', new Text))->value();
+        $filled = AutoWrap::wrapScalar($this->value('subtitle', 'Hello', new Text))->value();
+
+        $this->assertSame('', $empty);
+        $this->assertStringContainsString('data-alt-editable-handle="subtitle"', $filled);
+    }
+
+    #[Test]
+    public function empty_fields_are_wrapped_by_default()
+    {
+        $this->withLivePreview();
+
+        $empty = AutoWrap::wrapScalar($this->value('subtitle', '', new Text))->value();
+
+        $this->assertStringContainsString('data-alt-editable-empty="1"', $empty);
+    }
+
+    private function withLivePreview(): void
+    {
+        Token::shouldReceive('find')
+            ->with('live-preview-token')
+            ->andReturn(new FileToken('live-preview-token', LivePreview::class, []));
+
+        request()->headers->set('X-Statamic-Token', 'live-preview-token');
     }
 }

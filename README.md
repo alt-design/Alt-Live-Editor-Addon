@@ -1,172 +1,133 @@
 # Alt Live Editor
 
-Edit an entry's content by clicking it directly in the Statamic Live Preview iframe,
-rather than hunting for the matching field in the publish sidebar.
+> Click content in Live Preview to edit it, and the change goes straight into the publish form.
 
-Text and Bard fields become editable in place. Images, entry pickers, taxonomy fields
-and tags get a click-to-edit overlay. Page builder rows can be added, reordered,
-configured and deleted from the preview itself.
+Alt Live Editor lets editors change an entry by clicking it in Statamic's Live Preview, instead of hunting for the matching field in the publish form.
+
+## Features
+
+- Text and Bard fields edit in place in the preview
+- Images, entries, taxonomy terms and tags open a picker
+- Page builder rows can be added, moved, configured and deleted from the preview
+- The entry's own top-level text fields work with no template changes
+- Every change goes into the publish form, so saving, validation, revisions and permissions work as normal
+- Outside Live Preview the tags output their content unchanged, and the addon makes no external requests
 
 ## Requirements
 
-- Statamic **6.x**
-- PHP 8.2+
+- Statamic 6.40 or later (tested on 6.40.0)
+- PHP 8.2 or later
+- Live Preview served by the same Statamic site. An external preview URL does not receive the editing script.
 
-## Installation
+## How to Install
 
-```bash
+Run the following command from your project root:
+
+``` bash
 composer require alt-design/alt-live-editor
-php artisan vendor:publish --tag=alt-live-editor
 ```
 
-The second command copies the control panel JS into `public/vendor/alt-live-editor`.
-Re-run it after upgrading the addon.
+Statamic publishes the control panel script itself after every `composer install` and `composer update`, through the `statamic:install` step that a standard Statamic site runs after Composer. If your site's `composer.json` does not run that step, publish it yourself after installing or upgrading:
 
-To publish the config file:
-
-```bash
-php artisan vendor:publish --tag=alt-live-editor-config
+``` bash
+php artisan vendor:publish --tag=alt-live-editor --force
 ```
 
-## How it works
+## Basic usage
 
-There are two halves.
+Open any entry, click **Live Preview**, and click a heading or paragraph in the preview. The entry's own top-level text fields are picked up automatically.
 
-**In the control panel** (`resources/js/cp.js`) the addon listens for Statamic's
-`publish-container-created` event and keeps a reference to the live publish form. When
-the preview sends an edit, it resolves the field's dot-path within the form's values and
-calls `setFieldValue`, then nudges Live Preview to re-render.
+For page builder rows, images and relationship fields, wrap the markup in the addon's tags so it knows what each part of the page is:
 
-**In the preview iframe** (`resources/js/iframe.js`, injected into the response on
-Live Preview requests only) the addon finds elements the templates marked as editable,
-makes them `contenteditable`, and posts changes back to the parent window.
+``` antlers
+{{ alt_live_editor handle="title" as="h1" }}{{ title }}{{ /alt_live_editor }}
 
-The marking happens in PHP. `AutoWrap` hooks the Antlers cascade and, **only when
-`request()->isLivePreview()` is true**, replaces each of the entry's values with one
-that renders itself wrapped in a `data-alt-editable-*` span. Your front end is
-completely untouched outside Live Preview — no markup changes, no extra requests.
+{{ alt_live_editor:image handle="hero_image" }}
+    <img src="{{ hero_image:url }}" alt="{{ hero_image:alt }}">
+{{ /alt_live_editor:image }}
 
-Nothing is written to disk from the preview. Edits are pushed into the publish form
-exactly as if they'd been typed in the sidebar; the editor still has to press **Save**.
-That's why the confirmation pill says *Updated* rather than *Saved*.
-
-## Template tags
-
-Scalar fields on the entry are wrapped automatically. For anything nested — a page
-builder row, an image, a relationship — wrap it explicitly so the addon knows what it's
-looking at.
-
-### `{{ alt_live_editor }}`
-
-Marks arbitrary content as an editable field.
-
-```antlers
-{{ alt_live_editor handle="heading" as="h1" }}{{ heading }}{{ /alt_live_editor }}
-```
-
-| Parameter | Default | Description |
-| --- | --- | --- |
-| `handle` | *required* | The field handle to bind to |
-| `as` | `span` | Element to wrap with |
-| `type` | `text` | `text` or `html` — whether to send `innerText` or `innerHTML` |
-
-### `{{ alt_live_editor:row }}`
-
-Wraps one page builder row so it gets the hover toolbar (move, settings, delete) and
-the "add section" buttons. Use it inside your set loop — it reads `index`, `type` and
-`last` from the loop context automatically.
-
-```antlers
 {{ page_builder }}
     {{ alt_live_editor:row }}
-        {{ partial src="_page_builder/{type}" }}
+        {{ partial src="page_builder/{type}" }}
     {{ /alt_live_editor:row }}
 {{ /page_builder }}
 ```
 
-### `{{ alt_live_editor:image }}`
+In Live Preview, each row now shows a toolbar on hover or keyboard focus (move up, move down, settings, delete) and an **Add section** button above it. There are also `alt_live_editor:entries`, `alt_live_editor:taxonomy` and `alt_live_editor:tags` for relationship fields.
 
-```antlers
-{{ alt_live_editor:image handle="hero_image" container="assets" }}
-    <img src="{{ hero_image:url }}" alt="{{ hero_image:alt }}">
-{{ /alt_live_editor:image }}
-```
-
-| Parameter | Description |
-| --- | --- |
-| `handle` | *required* — the assets field handle |
-| `container` | Asset container, defaults to `assets` |
-| `index` | For a gallery loop, which item this is — enables per-slide replace |
-| `rowid` | Override the auto-detected parent set id |
-
-### `{{ alt_live_editor:entries }}` / `{{ alt_live_editor:taxonomy }}` / `{{ alt_live_editor:tags }}`
-
-```antlers
-{{ alt_live_editor:entries handle="featured" collections="blog" max="3" }}
-    {{ featured }}<a href="{{ url }}">{{ title }}</a>{{ /featured }}
-{{ /alt_live_editor:entries }}
-```
-
-`entries` takes `collections` and `max`; `taxonomy` takes `taxonomies` and `max`;
-`tags` takes just `handle`. All three accept `rowid`.
+The preview never saves anything itself. To save, the editor presses **Save** in the publish form, or **Save changes** in the preview, which presses the same button for them.
 
 ## Configuration
 
-`config/alt-live-editor.php`:
+Publish the config file to change the defaults:
+
+``` bash
+php artisan vendor:publish --tag=alt-live-editor-config
+```
 
 | Key | Default | Description |
 | --- | --- | --- |
-| `exclude_handles` | `slug`, `id`, `url`, `permalink` | Never made editable |
-| `picker` | see below | Which picker UI opens for relationship-ish fields |
-| `debug` | `false` | Log to the browser console (`ALT_LIVE_EDITOR_DEBUG`) |
+| `exclude_handles` | `slug`, `id`, `url`, `permalink` | Fields that are never made editable |
+| `picker` | see the documentation | Whether images, entries, taxonomy and tags fields open Statamic's own picker or the addon's built-in one |
+| `wrap_empty_fields` | `true` | Makes empty text fields clickable in the preview. A template block wrapped in `{{ if field }}` then shows in the preview even when the field is empty, which the live site would not. Set to `false` to match the live site |
+| `debug` | `false` | Logs to the browser console. Set with `ALT_LIVE_EDITOR_DEBUG` |
 
-### Picker styles
+## Permissions and security
 
-Two implementations ship, chosen per field type:
-
-- **`native`** — reveals Statamic's own field in the publish sidebar and opens its
-  picker. Familiar, and supports every option the fieldtype does. It drives Statamic's
-  internal Vue components, so it's the half most likely to need attention after a
-  Statamic upgrade.
-- **`builtin`** — opens this addon's own picker inside the preview. Works with the
-  sidebar hidden and doesn't touch Statamic internals, but supports a narrower set of
-  options (no folder-level permissions, no custom fieldtype config).
-
-```php
-'picker' => [
-    'image' => 'native',
-    'entries' => 'native',
-    'taxonomy' => 'native',
-    'tags' => 'builtin',
-],
-```
-
-Set `'picker' => 'builtin'` as a plain string to use the built-in pickers everywhere.
-
-`tags` defaults to `builtin` because Statamic's tags fieldtype has no picker to open —
-the native path can only focus the input, which isn't much of an editing experience.
-
-## Security
-
-The two halves talk over `postMessage`. Messages are only accepted from a window this
-document actually hosts (an identity check on `event.source`, not a comparable origin
-string), and replies are addressed to that frame's real origin rather than broadcast
-with `*`. The CP endpoints live in `routes/cp.php`, so they inherit Statamic's control
-panel middleware — authentication and CSRF included.
+The addon adds no permissions of its own. Editors use it with the permissions they already have: the pickers only list entries and terms the user can view, the row endpoints refuse blueprints the user cannot view, and saving still needs the user's normal edit permission on the entry. The editing script is only added to pages Statamic recognises as Live Preview, so normal front-end pages are never changed.
 
 ## Known limitations
 
-- Scalar values are wrapped in a `<span>`. If a field renders block-level HTML, that
-  span ends up wrapping block content, which is technically invalid nesting. It renders
-  fine everywhere in practice, but it's why the wrapper is stripped back out when it
-  lands inside an HTML attribute.
-- Dragging a row from one field into a different field isn't supported — reordering
-  works within a single replicator/set field only.
-- Bard set nodes are skipped when marking editable content; their fields are wrapped
-  via the normal nested-set path instead.
-- Requires the preview iframe to be same-app. A wholly external preview URL won't
-  receive the injected script.
+- Plain field values are wrapped in a `<span>` in Live Preview. If a field renders block-level HTML, that span wraps block content. Browsers render it correctly, and the wrapper is removed where it would land inside an HTML attribute.
+- A row cannot be dragged from one field into another. Reordering works within one field.
+- Bard sets are edited through their own fields, not as part of the Bard text.
+
+## Documentation
+
+[DOCUMENTATION.md](DOCUMENTATION.md) covers every template tag and parameter, the picker styles, how the addon works and its security model. Changes are listed in [CHANGELOG.md](CHANGELOG.md).
+
+## Testing
+
+``` bash
+composer install
+./vendor/bin/phpunit
+```
+
+## Questions etc
+
+Drop us a big shout-out if you have any questions, comments, or concerns. We're always looking to improve our addons, so if you have any feature requests, we'd love to hear them.
+
+Bug reports and support requests go to [GitHub issues](https://github.com/alt-design/Alt-Live-Editor-Addon/issues).
+
+### Starter Kits
+- [Alt Starter Kit](https://statamic.com/starter-kits/alt-design/alt-starter-kit)
+
+### Addons
+- [Alt Admin Bar Addon](https://github.com/alt-design/Alt-Admin-Bar-Addon)
+- [Alt AI Addon](https://github.com/alt-design/Alt-AI-Addon)
+- [Alt Akismet Addon](https://github.com/alt-design/Alt-Akismet-Addon)
+- [Alt Cookies Addon](https://github.com/alt-design/Alt-Cookies-Addon)
+- [Alt Google 2FA Addon](https://github.com/alt-design/Alt-Google-2fa-Addon)
+- [Alt Google Maps Addon](https://github.com/alt-design/Alt-google-maps-addon)
+- [Alt Inbound Addon](https://github.com/alt-design/Alt-Inbound-Addon)
+- [Alt Live Editor Addon](https://github.com/alt-design/Alt-Live-Editor-Addon)
+- [Alt Password Protect Addon](https://github.com/alt-design/Alt-Password-Protect-Addon)
+- [Alt Redirect Addon](https://github.com/alt-design/Alt-Redirect-Addon)
+- [Alt SEO Addon](https://github.com/alt-design/Alt-SEO-Addon)
+- [Alt Sitemap Addon](https://github.com/alt-design/Alt-Sitemap-Addon)
+- [Alt Tabs Addon](https://github.com/alt-design/Alt-Tabs-Addon)
+- [RiffRaff Addon](https://github.com/alt-design/Alt-RiffRaff-Addon)
 
 ## Licence
 
-MIT — © Alt Design Ltd
+MIT, copyright Alt Design Ltd. See [LICENSE](LICENSE).
+
+## Postcardware
+
+Send us a postcard from your hometown if you like this addon. We love getting mail from other cool peeps!
+
+Alt Design  
+St Helens House  
+Derby  
+DE1 3EE  
+UK
